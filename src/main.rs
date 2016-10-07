@@ -1,8 +1,11 @@
+#[macro_use]
+extern crate log;
 extern crate nix;
 extern crate libc;
 extern crate docopt;
 extern crate rustc_serialize;
 
+use std::process;
 use docopt::Docopt;
 
 mod signals;
@@ -15,6 +18,7 @@ Options:
     -h, --help       Display this message
     -V, --version    Print version info and exit
     -v, --verbose    Use verbose output
+    -g, --group      Forward signals to groups
     --from           URL to retrive the environments from
     --from-env       Envrionment variable contains the URL to retrive the environments from
 Examples:
@@ -27,6 +31,7 @@ Examples:
 struct Args {
     arg_args: Vec<String>,
     arg_cmd: Option<String>,
+    flag_group: bool,
     flag_verbose: bool,
     flag_from: Option<String>
 }
@@ -42,18 +47,24 @@ fn main() {
     }
 
     let cmd = args.arg_cmd.unwrap();
-
-    let pid = child::spawn(cmd).unwrap();
+    let should_kill_group = args.flag_group;
+    let args = args.arg_args;
+    let mut command = child::parse_command(cmd, &args);
+    let pid = child::spawn_command(&mut command).unwrap();
     
     loop {
-        match signals::wait_and_forward(pid) {
-            Ok(signals::ForwardState::Forwarded) => {
-                println!("Forwarded")
+        match signals::wait_and_forward(pid, should_kill_group) {
+            Err(e) => panic!("{:?}", e),
+            Ok(signals::ForwardState::ChildDead) => { trace!("The child process is dead") },
+            Ok(signals::ForwardState::Forwarded) => { trace!("Signal forwarded to children") }
+        }
+
+        match child::reap_zombies(pid) {
+            Ok(child::ReapState::Next) => {},
+            Ok(child::ReapState::Exit(code)) => {
+                process::exit(code);
             },
-            Ok(signals::ForwardState::ChildDead) => {
-                println!("Child dead")
-            },
-            Err(e) => panic!("{:?}", e)
+            Err(e) => panic!("Failed to reap children {:?}", e)
         }
     }
 }

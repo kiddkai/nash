@@ -16,7 +16,7 @@ pub enum ForwardState {
     Forwarded
 }
 
-pub fn wait_and_forward(pid: pid_t) -> Result<ForwardState> {
+pub fn wait_and_forward(pid: pid_t, should_kill_group: bool) -> Result<ForwardState> {
     let mask = SigSet::all();
     let signal = mask.wait();
 
@@ -27,7 +27,7 @@ pub fn wait_and_forward(pid: pid_t) -> Result<ForwardState> {
                     Ok(ForwardState::ChildDead)
                 },
                 _ => {
-                    signal::kill(pid, s).map(|_| ForwardState::Forwarded)
+                    signal::kill(if should_kill_group { -pid } else { pid }, s).map(|_| ForwardState::Forwarded)
                 }
             }
         },

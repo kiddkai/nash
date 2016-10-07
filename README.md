@@ -8,43 +8,25 @@
 cargo install nash
 ```
 
-In `OSX`, when you get a error message like this:
-
-```
-cargo:warning=src/openssl_shim.c:1:10: fatal error: 'openssl/hmac.h' file not found
-cargo:warning=#include <openssl/hmac.h>
-cargo:warning=         ^
-cargo:warning=1 error generated.
-ExitStatus(ExitStatus(256))
-```
-
-A easy way to fix this is using `homebrew` is run a simple command:
-
-```
-brew link --force openssl
-```
-
-If you are not using `homebrew`, please checkout this [issue](https://github.com/sfackler/rust-openssl/issues/255).
-
 ## Usage
 
 ```
-nash
-
-Command runner
-
 Usage:
-    nash <command> [<args>...]
-    nash [options]
-
+    nash [options] <cmd> [<args>...]
 Options:
-    -h, --help          display this message
-    -V, --version       display current version
-    --list              list commands
-    -v, --verbose       Use verbose output
-
-Commands:
-    run                 Run the command
-    init                Create a nash config
-    help                Show helps for different commands
+    -h, --help       Display this message
+    -V, --version    Print version info and exit
+    -v, --verbose    Use verbose output
+    -g, --group      Forward signals to groups
+    --from           URL to retrive the environments from
+    --from-env       Envrionment variable contains the URL to retrive the environments from
+Examples:
+    nash ls -al
+    nash --from s3://bucket/secrets/foo.json ls -al
+    nash --from-env NASH_FROM ls -al
 ```
+
+## When to use it?
+
+When we start running a service using docker. We always need some kind of keys need to use to connect
+to the database or other external services.
