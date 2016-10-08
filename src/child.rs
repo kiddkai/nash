@@ -2,8 +2,8 @@ use nix;
 use libc::pid_t;
 use nix::errno::Errno;
 use std::process::Command;
-use std::os::unix::process::CommandExt;
 use nix::unistd::{fork, setpgid};
+use std::os::unix::process::CommandExt;
 use nix::unistd::ForkResult::{Child, Parent};
 use nix::sys::wait::{self, waitpid, WaitStatus};
 
@@ -49,15 +49,12 @@ pub fn reap_zombies(child_pid: pid_t) -> nix::Result<ReapState> {
                 }
             },
             Ok(WaitStatus::Stopped(pid, sig)) => {
-                trace!("signaled pid: {:?} sig: {:?}", pid, sig);
                 return Ok(ReapState::Next);
             },
             Ok(WaitStatus::Continued(pid)) => {
-                trace!("signaled pid: {:?}", pid);
                 return Ok(ReapState::Next);
             },
             Ok(WaitStatus::StillAlive) => {
-                trace!("Still alive");
                 return Ok(ReapState::Next);
             },
             Err(nix::Error::Sys(Errno::ECHILD)) => {

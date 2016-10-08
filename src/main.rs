@@ -8,8 +8,9 @@ extern crate rustc_serialize;
 use std::process;
 use docopt::Docopt;
 
-mod signals;
-mod child;
+pub mod signals;
+pub mod child;
+pub mod env_source;
 
 const USAGE: &'static str = "
 Usage:
@@ -18,7 +19,7 @@ Options:
     -h, --help       Display this message
     -V, --version    Print version info and exit
     -v, --verbose    Use verbose output
-    -g, --group      Forward signals to groups
+    -g, --group      Forward signals to process group rather than the single process
     --from           URL to retrive the environments from
     --from-env       Envrionment variable contains the URL to retrive the environments from
 Examples:
