@@ -12,18 +12,36 @@ cargo install nash
 
 ```
 Usage:
-    nash [options] <cmd> [<args>...]
+    nash [--from=<URL>] <cmd> [<args>...]
 Options:
-    -h, --help       Display this message
-    -V, --version    Print version info and exit
-    -v, --verbose    Use verbose output
-    -g, --group      Forward signals to groups
-    --from           URL to retrive the environments from
-    --from-env       Envrionment variable contains the URL to retrive the environments from
-Examples:
-    nash ls -al
-    nash --from s3://bucket/secrets/foo.json ls -al
-    nash --from-env NASH_FROM ls -al
+    -h,     --help       Display this message
+    -V,     --version    Print version info and exit
+    -v,     --verbose    Use verbose output
+    -g,     --group      Forward signals to process group rather than the single process
+    -f URL, --from=URL   URI to retrive the environments from
+```
+
+## Sources
+
+### Local file system
+
+When we have a file `/path/to/sth.env`, with the content below:
+
+```env
+FOO=bar
+BAR=baz
+```
+
+We can do:
+
+```
+nash --from=file:///path/to/sth.env sh -c 'echo "$FOO|$BAR"'
+```
+
+Which prints:
+
+```
+bar|baz
 ```
 
 ## When to use it?
