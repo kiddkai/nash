@@ -6,12 +6,18 @@ use nix::unistd::{fork, setpgid};
 use std::os::unix::process::CommandExt;
 use nix::unistd::ForkResult::{Child, Parent};
 use nix::sys::wait::{self, waitpid, WaitStatus};
+use parser::EnvVar;
 
-pub fn parse_command(cmd: String, args: &Vec<String>) -> Command {
+pub fn parse_command(cmd: &str, args: &Vec<String>, envs: &Vec<EnvVar>) -> Command {
     let mut command = Command::new(cmd);
     for argv in args {
         command.arg(argv);
     }
+
+    for env in envs {
+        command.env(&env.0, &env.1);
+    }
+
     command
 }
 
@@ -48,10 +54,10 @@ pub fn reap_zombies(child_pid: pid_t) -> nix::Result<ReapState> {
                     return Ok(ReapState::Exit(if exit_with_error { 128 } else { 0 }));
                 }
             }
-            Ok(WaitStatus::Stopped(pid, sig)) => {
+            Ok(WaitStatus::Stopped(_, _)) => {
                 return Ok(ReapState::Next);
             }
-            Ok(WaitStatus::Continued(pid)) => {
+            Ok(WaitStatus::Continued(_)) => {
                 return Ok(ReapState::Next);
             }
             Ok(WaitStatus::StillAlive) => {

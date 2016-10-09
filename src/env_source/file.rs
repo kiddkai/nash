@@ -10,8 +10,8 @@ pub struct FileFetcher {
 }
 
 impl FileFetcher {
-    fn new(path: String) -> FileFetcher {
-        FileFetcher { path: path }
+    pub fn new(path: &str) -> FileFetcher {
+        FileFetcher { path: path.to_owned() }
     }
 }
 
@@ -42,7 +42,7 @@ mod test {
         let path = dir.path().join("single_line.env");
         let mut f = File::create(&path).expect("can not create file");
         writeln!(f, "FOO=BAR").expect("Failed to write content to file");
-        let fetcher = FileFetcher::new(path.as_path().to_str().unwrap().to_string());
+        let fetcher = FileFetcher::new(path.as_path().to_str().unwrap());
         let env = fetcher.fetch().unwrap();
         assert_eq!(env.len(), 1)
     }

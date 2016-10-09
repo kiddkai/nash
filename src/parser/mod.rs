@@ -15,7 +15,7 @@ pub struct ParseError {
 }
 
 #[derive(PartialEq, Debug)]
-pub struct EnvVar(String, String);
+pub struct EnvVar(pub String, pub String);
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -35,3 +35,4 @@ impl error::Error for ParseError {
 pub type ParseResult = Result<Vec<EnvVar>, ParseError>;
 
 pub mod env_file;
+

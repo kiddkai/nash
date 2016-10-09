@@ -1,8 +1,9 @@
 use std::io;
 use std::fmt;
 use std::error;
-use parser::{self, EnvVar};
+use hyper::Url;
 use std::convert::From;
+use parser::{self, EnvVar};
 
 #[derive(Debug)]
 pub enum SourceError {
@@ -58,3 +59,13 @@ pub trait Fetchable {
 }
 
 pub mod file;
+
+pub fn fetch(url_str: &str) -> FetchResult {
+    let url = Url::parse(url_str).unwrap();
+    match url.scheme() {
+        "file" => {
+            self::file::FileFetcher::new(url.path()).fetch()
+        }
+        _ => { Ok(vec![]) }
+    }
+}

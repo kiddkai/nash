@@ -2,8 +2,9 @@
 extern crate log;
 extern crate nix;
 extern crate libc;
-extern crate tempdir;
+extern crate hyper;
 extern crate docopt;
+extern crate tempdir;
 extern crate rustc_serialize;
 
 use std::process;
@@ -34,16 +35,19 @@ struct Args {
     flag_from: Option<String>,
 }
 
-fn bootstrap(args: Args) {
+fn bootstrap(args: &Args, envs: Vec<parser::EnvVar>) {
     match signals::init() {
         Ok(_) => {}
         Err(e) => panic!("failed to register initial signal handlers due to: {}", e),
     }
 
-    let cmd = args.arg_cmd.unwrap();
     let should_kill_group = args.flag_group;
-    let args = args.arg_args;
-    let mut command = child::parse_command(cmd, &args);
+    let arg_cmd = args.arg_cmd.as_ref();
+    let mut command = child::parse_command(
+        arg_cmd.unwrap(),
+        &args.arg_args,
+        &envs
+    );
     let pid = child::spawn_command(&mut command).unwrap();
 
     loop {
@@ -63,9 +67,19 @@ fn bootstrap(args: Args) {
     }
 }
 
+fn fetch_env(args: &Args) -> env_source::FetchResult {
+    let from_url = args.flag_from.as_ref().unwrap();
+    env_source::fetch(from_url)
+}
+
 fn main() {
     let args: Args = Docopt::new(USAGE)
         .and_then(|d| d.options_first(true).decode())
         .unwrap_or_else(|e| e.exit());
-    bootstrap(args)
+
+    let envs = match fetch_env(&args) {
+        Ok(envs) => envs,
+        Err(_) => vec![]
+    };
+    bootstrap(&args, envs)
 }
