@@ -22,15 +22,15 @@ pub fn spawn_command(cmd: &mut Command) -> nix::Result<pid_t> {
             try!(setpgid(0, 0));
             cmd.exec();
             Ok(-1)
-        },
-        Ok(Parent { child })  => Ok(child),
-        Err(e) => Err(e)
+        }
+        Ok(Parent { child }) => Ok(child),
+        Err(e) => Err(e),
     }
 }
 
 pub enum ReapState {
     Next,
-    Exit(i32)
+    Exit(i32),
 }
 
 pub fn reap_zombies(child_pid: pid_t) -> nix::Result<ReapState> {
@@ -41,27 +41,27 @@ pub fn reap_zombies(child_pid: pid_t) -> nix::Result<ReapState> {
                 if child_pid == pid {
                     return Ok(ReapState::Exit(code as i32));
                 }
-            },
+            }
             Ok(WaitStatus::Signaled(pid, sig, exit_with_error)) => {
                 trace!("signaled pid: {:?} sig: {:?}", pid, sig);
                 if child_pid == pid {
                     return Ok(ReapState::Exit(if exit_with_error { 128 } else { 0 }));
                 }
-            },
+            }
             Ok(WaitStatus::Stopped(pid, sig)) => {
                 return Ok(ReapState::Next);
-            },
+            }
             Ok(WaitStatus::Continued(pid)) => {
                 return Ok(ReapState::Next);
-            },
+            }
             Ok(WaitStatus::StillAlive) => {
                 return Ok(ReapState::Next);
-            },
+            }
             Err(nix::Error::Sys(Errno::ECHILD)) => {
                 trace!("No more child");
                 return Ok(ReapState::Exit(-1));
-            },
-            Err(e) => { return panic!("Failed to reap child process due to {:?}", e) },
+            }
+            Err(e) => return panic!("Failed to reap child process due to {:?}", e),
         }
     }
 }

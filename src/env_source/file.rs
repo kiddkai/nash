@@ -1,14 +1,18 @@
-use env_source::{FetchResult, Fetchable};
-use std::path::Path;
 use std::fs::File;
 use std::io::Read;
+use std::path::Path;
+use parser::env_file::parse_env_content;
+use env_source::{FetchResult, Fetchable, SourceError};
 
+#[derive(Debug)]
 pub struct FileFetcher {
-    path: String
+    path: String,
 }
 
-pub fn parse_env_content(content: String) -> FetchResult {
-    return Ok(vec![("FOO".to_string(), "BAR".to_string())])
+impl FileFetcher {
+    fn new(path: String) -> FileFetcher {
+        FileFetcher { path: path }
+    }
 }
 
 impl Fetchable for FileFetcher {
@@ -17,14 +21,29 @@ impl Fetchable for FileFetcher {
         let mut file = try!(File::open(path));
         let mut content = String::new();
         try!(file.read_to_string(&mut content));
-        parse_env_content(content)
+        match parse_env_content(&content) {
+            Ok(v) => Ok(v),
+            Err(e) => Err(SourceError::Parse(e)),
+        }
     }
 }
 
 #[cfg(test)]
 mod test {
+    use env_source::*;
+    use super::*;
+    use std::fs::File;
+    use std::io::*;
+    use tempdir::TempDir;
+
     #[test]
     fn parse_simple_pair() {
-        assert!(0 == 0)
+        let dir = TempDir::new("single_line").expect("failed to create dir");
+        let path = dir.path().join("single_line.env");
+        let mut f = File::create(&path).expect("can not create file");
+        writeln!(f, "FOO=BAR").expect("Failed to write content to file");
+        let fetcher = FileFetcher::new(path.as_path().to_str().unwrap().to_string());
+        let env = fetcher.fetch().unwrap();
+        assert_eq!(env.len(), 1)
     }
 }

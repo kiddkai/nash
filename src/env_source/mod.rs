@@ -1,22 +1,22 @@
 use std::io;
-use std::error;
 use std::fmt;
+use std::error;
+use parser::{self, EnvVar};
 use std::convert::From;
-
-pub type EnvVar = (String, String);
-pub type EnvVars = Vec<EnvVar>;
 
 #[derive(Debug)]
 pub enum SourceError {
     Io(io::Error),
-    Nothing
+    Parse(parser::ParseError),
+    Nothing,
 }
 
 impl fmt::Display for SourceError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
+            SourceError::Parse(ref err) => write!(f, "Parse Error {}", err),
             SourceError::Io(ref err) => write!(f, "IO Error {}", err),
-            SourceError::Nothing => write!(f, "Something else")
+            SourceError::Nothing => write!(f, "Something else"),
         }
     }
 }
@@ -24,15 +24,17 @@ impl fmt::Display for SourceError {
 impl error::Error for SourceError {
     fn description(&self) -> &str {
         match *self {
+            SourceError::Parse(ref err) => err.description(),
             SourceError::Io(ref err) => err.description(),
-            SourceError::Nothing => "something else unknown"
+            SourceError::Nothing => "something else unknown",
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
+            SourceError::Parse(ref err) => err.cause(),
             SourceError::Io(ref err) => err.cause(),
-            SourceError::Nothing => None
+            SourceError::Nothing => None,
         }
     }
 }
@@ -43,7 +45,13 @@ impl From<io::Error> for SourceError {
     }
 }
 
-pub type FetchResult = Result<EnvVars, SourceError>;
+impl From<parser::ParseError> for SourceError {
+    fn from(err: parser::ParseError) -> SourceError {
+        SourceError::Parse(err)
+    }
+}
+
+pub type FetchResult = Result<Vec<EnvVar>, SourceError>;
 
 pub trait Fetchable {
     fn fetch(&self) -> FetchResult;
