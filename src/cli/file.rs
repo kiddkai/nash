@@ -26,7 +26,7 @@ pub fn execute(ref args: &Vec<String>) -> CliResult<FileFetcher> {
     }
     
     match filePath {
-        None => Err(CliError::BadArgument),
+        None => Err(CliError::BadArgument("".to_string(), USAGE.to_string())),
         Some(p) => Ok(FileFetcher::new(p.as_ref()))
     }
 }

@@ -67,7 +67,7 @@ pub fn reap_zombies(child_pid: pid_t) -> nix::Result<ReapState> {
                 trace!("No more child");
                 return Ok(ReapState::Exit(-1));
             }
-            Err(e) => return panic!("Failed to reap child process due to {:?}", e),
+            Err(e) => return Err(e)
         }
     }
 }

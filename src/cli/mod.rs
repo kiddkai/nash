@@ -1,6 +1,7 @@
 use std::{error, result, env, fmt};
 use std::convert::From;
 use env_source::{SourceError, Fetchable};
+use daemon;
 
 const USAGE: &'static str = "
 Usage:
@@ -36,40 +37,41 @@ struct CliOptionBuilder {
 #[derive(Debug)]
 pub enum CliError {
     Fetch(SourceError),
-    BadArgument,
-    UnknownCommand
+    Daemon(daemon::DaemonError),
+    BadArgument(String, String),
+    UnknownCommand(String, String)
 }
 
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             CliError::Fetch(ref e) => write!(f, "Failed to fetch {}", e),
-            CliError::BadArgument => write!(f, "bad argument"),
-            CliError::UnknownCommand => write!(f, "unknown command")
+            CliError::Daemon(ref e) => write!(f, "Daemon error {}", e),
+            CliError::BadArgument(ref arg, ref usage) => write!(f, "Bad argument {}\n{}", arg, usage),
+            CliError::UnknownCommand(ref cmd, ref usage) => write!(f, "Unknown command {},\n{}", cmd, usage)
         }
     }
 }
 
-impl From<SourceError> for CliError {
-    fn from(err: SourceError) -> CliError {
-        CliError::Fetch(err)
-    }
-}
+impl From<SourceError> for CliError { fn from(err: SourceError) -> CliError { CliError::Fetch(err) } }
+impl From<daemon::DaemonError> for CliError { fn from(err: daemon::DaemonError) -> CliError { CliError::Daemon(err) } }
 
 impl error::Error for CliError {
     fn description(&self) -> &str {
         match *self {
             CliError::Fetch(ref e) => e.description(),
-            CliError::BadArgument => "bad argument",
-            CliError::UnknownCommand => "unknown command"
+            CliError::Daemon(ref e) => e.description(),
+            CliError::BadArgument(_, _) => "BadArgument",
+            CliError::UnknownCommand(_, _) => "UnknownComand"
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
             CliError::Fetch(ref e) => e.cause(),
-            CliError::BadArgument => None,
-            CliError::UnknownCommand => None
+            CliError::Daemon(ref e) => e.cause(),
+            CliError::BadArgument(_, _) => None,
+            CliError::UnknownCommand(_, _) => None
         }
     }
 }
@@ -133,34 +135,32 @@ impl CliOptionBuilder {
 
 pub mod file;
 
-pub fn start() -> CliResult<()> {
+pub fn start() -> CliResult<i32> {
     let mut builder = CliOptionBuilder::new();
 
     for arg in env::args().skip(1) {
         builder.add(&arg);
     }
-
     let options = builder.to_cli_option();
 
     if options.flag_help {
         println!("{}", USAGE);
-        return Ok(());
+        return Ok(0);
     }
 
     if options.source == None {
-        println!("{}", USAGE);
-        return Ok(());
+        return Err(CliError::UnknownCommand("empty".to_string(), USAGE.to_string()));
     }
 
     let source = options.source.unwrap();
 
     let fetcher = match source.as_ref() {
         "file" => try!(file::execute(&options.source_args)),
-        _ => return Err(CliError::UnknownCommand)
+        _ => return Err(CliError::UnknownCommand(source.clone(), USAGE.to_owned()))
     };
 
     let envs = try!(fetcher.fetch());
 
-    Ok(())
+    Ok(0)
 }
 

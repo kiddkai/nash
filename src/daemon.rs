@@ -1,25 +1,27 @@
 use std::{error, result, fmt, convert};
 use nix;
 use child;
-use signal;
+use signals;
 use env_source::*;
 use parser::*;
 
 #[derive(Debug)]
-enum DaemonError {
-    SignalError(nix::Error)
+pub enum DaemonError {
+    SignalError(nix::Error),
+    ChildError(nix::Error)
 }
 
 impl DaemonError {
     fn exit_code(&self) -> i32 {
         match *self {
-            DaemonError::SignalError(ref e) => 128
+            DaemonError::SignalError(_) => 128,
+            DaemonError::ChildError(_) => 1
         }
     }
 }
 
 impl convert::From<nix::Error> for DaemonError {
-    fn from(err: nix::Err) -> DaemonError {
+    fn from(err: nix::Error) -> DaemonError {
         DaemonError::SignalError(err)
     }
 }
@@ -27,53 +29,52 @@ impl convert::From<nix::Error> for DaemonError {
 impl error::Error for DaemonError {
     fn description(&self) -> &str {
         match *self {
-            DaemonError::SignalError(ref e) => e.description()
+            DaemonError::SignalError(ref e) => e.description(),
+            DaemonError::ChildError(ref e) => e.description()
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
-            DaemonError::SignalError(ref e) => e.cause()
+            DaemonError::SignalError(ref e) => e.cause(),
+            DaemonError::ChildError(ref e) => e.cause()
         }
     }
 }
 
-impl fmt::Display for CliError {
+impl fmt::Display for DaemonError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            DaemonError::SignalError(ref e) => write!(f, "DaemonError {}", e),
+            DaemonError::SignalError(ref e) => write!(f, "SignalError {}", e),
+            DaemonError::ChildError(ref e) => write!(f, "ChildError {}", e)
         }
     }
 }
 
-type Result<T> = result::Result<T, DaemonError>;
+pub type Result<T> = result::Result<T, DaemonError>;
 
-pub fn start(args: &Vec<String>, envs: Vec<parser::EnvVar>) -> Result<()> {
+pub fn start(args: &Vec<String>, envs: Vec<EnvVar>, should_kill_group: bool) -> Result<i32> {
     try!(signals::init());
 
-    let should_kill_group = args.flag_group;
-    let arg_cmd = args.arg_cmd.as_ref();
     let mut command = child::parse_command(
-        arg_cmd.unwrap(),
-        &args.arg_args,
+        &args[0],
+        &args,
         &envs
     );
 
     let pid = child::spawn_command(&mut command).unwrap();
 
     loop {
-        match signals::wait_and_forward(pid, should_kill_group) {
-            Err(e) => panic!("{:?}", e),
-            Ok(signals::ForwardState::ChildDead) => trace!("The child process is dead"),
-            Ok(signals::ForwardState::Forwarded) => trace!("Signal forwarded to children"),
+        match try!(signals::wait_and_forward(pid, should_kill_group)){
+            signals::ForwardState::ChildDead => trace!("The child process is dead"),
+            signals::ForwardState::Forwarded => trace!("Signal forwarded to children"),
         }
 
-        match child::reap_zombies(pid) {
-            Ok(child::ReapState::Next) => {}
-            Ok(child::ReapState::Exit(code)) => {
-                process::exit(code);
-            }
-            Err(e) => panic!("Failed to reap children {:?}", e),
+        match try!(child::reap_zombies(pid)) {
+            child::ReapState::Exit(code) => return Ok(code),
+            _ => {}
         }
     }
+
+    Ok(0)
 }
