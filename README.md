@@ -12,13 +12,14 @@ cargo install nash
 
 ```
 Usage:
-    nash [--from=<URL>] <cmd> [<args>...]
+    nash [options] <source> [<source_args>...] -- <command> [<command_args>...]
 Options:
     -h,     --help       Display this message
-    -V,     --version    Print version info and exit
-    -v,     --verbose    Use verbose output
+    -v,     --version    Print version info and exit
     -g,     --group      Forward signals to process group rather than the single process
-    -f URL, --from=URL   URI to retrive the environments from
+Sources:
+    file                 The local file source
+    s3                   File source from s3
 ```
 
 ## Sources
@@ -35,13 +36,22 @@ BAR=baz
 We can do:
 
 ```
-nash --from=file:///path/to/sth.env sh -c 'echo "$FOO|$BAR"'
+nash file /path/to/sth.env -- printenv 
 ```
 
-Which prints:
+### From aws S3
+
+When we have a file `s3://path/to/sth.env`, with the content below:
+
+```env
+FOO=bar
+BAR=baz
+```
+
+We can do:
 
 ```
-bar|baz
+nash s3 --bucket path --object /to/sth.env --region ap-southeast-2 -- printenv 
 ```
 
 ## When to use it?
