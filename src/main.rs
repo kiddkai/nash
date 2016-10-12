@@ -3,6 +3,7 @@ extern crate log;
 extern crate nix;
 extern crate libc;
 extern crate hyper;
+extern crate rusoto;
 extern crate tempdir;
 
 pub mod signals;
@@ -17,6 +18,9 @@ use std::process;
 fn main() {
     match cli::start() {
         Ok(code) => process::exit(code),
-        Err(e) => panic!("{}", e)
+        Err(e) => {
+            println!("{}", e);
+            process::exit(e.exit_code());
+        }
     }
 }

@@ -2,7 +2,6 @@ use std::{error, result, fmt, convert};
 use nix;
 use child;
 use signals;
-use env_source::*;
 use parser::*;
 
 #[derive(Debug)]
@@ -12,7 +11,7 @@ pub enum DaemonError {
 }
 
 impl DaemonError {
-    fn exit_code(&self) -> i32 {
+    pub fn exit_code(&self) -> i32 {
         match *self {
             DaemonError::SignalError(_) => 128,
             DaemonError::ChildError(_) => 1
@@ -53,12 +52,12 @@ impl fmt::Display for DaemonError {
 
 pub type Result<T> = result::Result<T, DaemonError>;
 
-pub fn start(args: &Vec<String>, envs: Vec<EnvVar>, should_kill_group: bool) -> Result<i32> {
+pub fn start(args: &Vec<String>, envs: &Vec<EnvVar>, should_kill_group: bool) -> Result<i32> {
     try!(signals::init());
 
     let mut command = child::parse_command(
         &args[0],
-        &args,
+        &args.into_iter().skip(1).map(|s| s.to_owned()).collect(),
         &envs
     );
 
@@ -75,6 +74,4 @@ pub fn start(args: &Vec<String>, envs: Vec<EnvVar>, should_kill_group: bool) -> 
             _ => {}
         }
     }
-
-    Ok(0)
 }

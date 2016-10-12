@@ -1,14 +1,18 @@
 use std::io;
 use std::fmt;
 use std::error;
-use hyper::Url;
 use std::convert::From;
+use rusoto::s3::S3Error;
 use parser::{self, EnvVar};
+
+pub mod file;
+pub mod s3;
 
 #[derive(Debug)]
 pub enum SourceError {
     Io(io::Error),
     Parse(parser::ParseError),
+    S3(S3Error),
     Nothing,
 }
 
@@ -17,6 +21,7 @@ impl fmt::Display for SourceError {
         match *self {
             SourceError::Parse(ref err) => write!(f, "Parse Error {}", err),
             SourceError::Io(ref err) => write!(f, "IO Error {}", err),
+            SourceError::S3(ref err) => write!(f, "S3 Error {}", err),
             SourceError::Nothing => write!(f, "Something else"),
         }
     }
@@ -27,6 +32,7 @@ impl error::Error for SourceError {
         match *self {
             SourceError::Parse(ref err) => err.description(),
             SourceError::Io(ref err) => err.description(),
+            SourceError::S3(ref err) => err.description(),
             SourceError::Nothing => "something else unknown",
         }
     }
@@ -35,6 +41,7 @@ impl error::Error for SourceError {
         match *self {
             SourceError::Parse(ref err) => err.cause(),
             SourceError::Io(ref err) => err.cause(),
+            SourceError::S3(ref err) => err.cause(),
             SourceError::Nothing => None,
         }
     }
@@ -52,20 +59,16 @@ impl From<parser::ParseError> for SourceError {
     }
 }
 
+impl From<S3Error> for SourceError {
+    fn from(err: S3Error) -> SourceError {
+        SourceError::S3(err)
+    }
+}
+
 pub type FetchResult = Result<Vec<EnvVar>, SourceError>;
 
 pub trait Fetchable {
     fn fetch(&self) -> FetchResult;
 }
 
-pub mod file;
 
-pub fn fetch(url_str: &str) -> FetchResult {
-    let url = Url::parse(url_str).unwrap();
-    match url.scheme() {
-        "file" => {
-            self::file::FileFetcher::new(url.path()).fetch()
-        }
-        _ => { Ok(vec![]) }
-    }
-}
