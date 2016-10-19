@@ -187,18 +187,13 @@ pub fn start() -> CliResult<i32> {
     }
 
     let source = options.source.unwrap();
-    let envs = match source.as_ref() {
-        "file" => {
-            let f = try!(file::execute(&options.source_args));
-            try!(f.fetch())
-        },
-        "s3" => {
-            let f = try!(s3::execute(&options.source_args));
-            try!(f.fetch())
-        }
+    let fetcher: Box<Fetchable> = match source.as_ref() {
+        "file" => try!(file::execute(&options.source_args)),
+        "s3" => try!(s3::execute(&options.source_args)),
         _ => return Err(CliError::UnknownSource(source.clone(), USAGE.to_owned()))
     };
 
+    let envs = try!(fetcher.fetch());
     if options.command_args.len() < 1 {
         return Err(CliError::EmptyCommand);
     }

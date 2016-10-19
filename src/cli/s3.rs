@@ -16,7 +16,7 @@ Example:
     nash s3 -b prod_secrets -o service_name.env -- printenv
 ";
 
-pub fn execute(ref args: &Vec<String>) -> CliResult<S3Fetcher> {
+pub fn execute(ref args: &Vec<String>) -> CliResult<Box<S3Fetcher>> {
     let mut bucket_name: Option<String> = None;
     let mut object_key: Option<String> = None;
     let mut region_name: Option<String> = None;
@@ -45,5 +45,5 @@ pub fn execute(ref args: &Vec<String>) -> CliResult<S3Fetcher> {
         _ => {}
     }
 
-    Ok(S3Fetcher::new(&bucket_name.unwrap(), &object_key.unwrap(), &region_name.unwrap()))
+    Ok(Box::new(S3Fetcher::new(&bucket_name.unwrap(), &object_key.unwrap(), &region_name.unwrap())))
 }

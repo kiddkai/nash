@@ -14,7 +14,7 @@ Example:
     nash file -f file://$HOME/v.env -- printenv
 ";
 
-pub fn execute(ref args: &Vec<String>) -> CliResult<FileFetcher> {
+pub fn execute(ref args: &Vec<String>) -> CliResult<Box<FileFetcher>> {
     let mut file_path: Option<String> = None;
 
     for (idx, s) in args.into_iter().enumerate() {
@@ -27,6 +27,6 @@ pub fn execute(ref args: &Vec<String>) -> CliResult<FileFetcher> {
     
     match file_path {
         None => Err(CliError::BadArgument("--file is not specified".to_string(), USAGE.to_string())),
-        Some(p) => Ok(FileFetcher::new(p.as_ref()))
+        Some(p) => Ok(Box::new(FileFetcher::new(p.as_ref())))
     }
 }
