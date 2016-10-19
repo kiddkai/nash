@@ -12,3 +12,7 @@ hyper = "0.9.10"
 docopt = "0.6.85"
 rustc-serialize = "0.3.19"
 tempdir = "0.3"
+
+[profile.release]
+lto = true
+
